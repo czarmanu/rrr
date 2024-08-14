@@ -20,6 +20,8 @@ import datetime
 import earthaccess
 import glob
 import subprocess
+import requests
+import simplejson
 
 
 #*******************************************************************************
@@ -57,6 +59,8 @@ else:
 #*******************************************************************************
 #Print input information
 #*******************************************************************************
+print('- test: checkpoint 2')
+
 print('Command line inputs')
 print('- '+rrr_lsm_exp)
 print('- '+rrr_lsm_mod)
@@ -190,16 +194,10 @@ if (rrr_lsm_org!='org_no') and (rrr_lsm_org!=''):
 #*******************************************************************************
 if(rrr_lsm_exp=="GLDAS"):
     spatial_res = "10"
-    boundingBox = (-180,-60,180,90)   
-    variables   = "Qs_acc,Qsb_acc"
-    ext         = "/*.nc4"
-    ver         = 2.0
+    boundingBox = (-180,-60,180,90)    
 elif(rrr_lsm_exp=="NLDAS"):
     spatial_res = "0125"
     boundingBox = (-125,25,-67,53)
-    variables   = "BGRUN,SSRUN"
-    ext         = "/*.nc"
-    ver         = "002" #"002" for GRIB, 2.0 for netCDF
 else:
     print("ERROR - Invalid LDAS")
     raise SystemExit(22) 
@@ -208,68 +206,88 @@ else:
 #Earthaccess download function
 #*******************************************************************************
 def earthaccess_dwnld(file_count):
-    dwnld_files_srch = earthaccess.search_data(
-        #eg. GLDAS_VIC10_3H,   GLDAS_VIC10_M,
-        #    GLDAS_NOAH10_3H,  GLDAS_NOAH10_M
-        #    GLDAS_CLSM10_3H,  GLDAS_CLSM10_M
-        #    NLDAS_VIC0125_H,  NLDAS_VIC0125_M
-        #    NLDAS_NOAH0125_H, NLDAS_NOAH0125_M
-        #    NLDAS_MOS0125_H,  NLDAS_MOS0125_M
-        short_name=rrr_lsm_exp+"_"+rrr_lsm_mod+spatial_res+"_"+rrr_lsm_frq, 
-        cloud_hosted=True,
-        version=ver,
-        bounding_box=boundingBox,
-        temporal=(rrr_iso_beg, rrr_iso_end),
-        count=file_count 
-        )
-    
-    if(len(dwnld_files_srch)>0):
-        files_dwnld_list = earthaccess.download(dwnld_files_srch, rrr_lsm_dir)
-        print("LDAS files downloaded: ", files_dwnld_list)
-    else:
-        print("ERROR - Invalid search parameters for LDAS download")
-        raise SystemExit(22)
+    retries = 0  # Initialize the number of retries
+    while True:  # Run the loop indefinitely until condition met
+        try:
+            dwnld_files_srch = earthaccess.search_data(
+                # Modify with your specific parameters
+                short_name=rrr_lsm_exp + "_" + rrr_lsm_mod + spatial_res + "_" + rrr_lsm_frq,
+                cloud_hosted=True,
+                version=2.0,
+                bounding_box=boundingBox,
+                temporal=(rrr_iso_beg, rrr_iso_end),
+                count=file_count
+            )
+
+            if len(dwnld_files_srch) > 0:
+                files_dwnld_list = earthaccess.download(dwnld_files_srch, rrr_lsm_dir)
+                print("LDAS files downloaded: ", files_dwnld_list)
+                
+                # Count the number of properly downloaded files
+                valid_files = sum(1 for file in files_dwnld_list if isinstance(file, str) or issubclass(type(file), str))
+
+                print("Granules properly downloaded: ", valid_files)
+                print("Granules to be downloaded: ", file_count)
+                
+                if valid_files >= file_count:
+                    # If the number of valid files meets or exceeds the required count, exit the loop
+                    break
+                else:
+                    # Increment the number of retries
+                    retries += 1
+                    print(f"Retry {retries}...")
+            else:
+                print("ERROR - Invalid search parameters for LDAS download")
+                raise SystemExit(22)
+
+        except requests.exceptions.HTTPError as e:
+            print(f"HTTPError occurred during download: {e}")
+            print("Retrying...")
+            retries += 1
+            continue  # Retry the download
         
+        except simplejson.errors.JSONDecodeError as e:
+            print(f"JSON Decode Error occurred during download: {e}")
+            print("Retrying...")
+            retries += 1
+            continue  # Retry the download
+            
+        except Exception as e:
+            print(f"Exception occurred during download: {e}")
+            print("Retrying...")
+            retries += 1
+            continue  # Retry the download
+        
+    if valid_files < file_count:
+        print(f"Failed to download {file_count} files after retries.")
+    
     return len(dwnld_files_srch)
 
 #*******************************************************************************
 #Test download for one file
 #*******************************************************************************
-print('Checking that service and credentials work for one file')
+print('- test: checkpoint 3')
 
+print('Checking that service and credentials work for one file')
 num_granules = earthaccess_dwnld(1)
+
 
 #*******************************************************************************
 #Bulk download
 #*******************************************************************************
 if(num_granules>0):
-    print('Downloading all files')
-    
-    earthaccess_dwnld(IS_count)
-    
-    #convert GRIB to netCDF file for NLDAS
-    if(rrr_lsm_exp=="NLDAS"):
-        print("converting downloaded GRIB files to netCDF")
-        print("renaming var234 (subsurface runoff) as BGRUN, var235 (surface runoff) as SSRUN")
-        
-        for grb_file in glob.glob(rrr_lsm_dir + "/*.grb"):
-            nc_file = grb_file.replace('.grb', '.nc')
-            
-            #convert GRIB to netCDF
-            command = ["cdo", "-f", "nc", "copy", grb_file, nc_file]
-            subprocess.run(command, check=True)
-            
-            #rename var234 as BGRUN, var235 as SSRUN
-            command = ["ncrename", "-v", ".var234,BGRUN", "-v", ".var235,SSRUN", nc_file]
-            subprocess.run(command, check=True)
+    print('- test: checkpoint 4')
 
+    print('Downloading all files')
+    earthaccess_dwnld(IS_count) # 8*31=248, 24x31=744
+    
     print('Removing surplus variables from netCDF files')
     # Iterate through each NetCDF file and delete surplus variables
-    
-    for nc_file in glob.glob(rrr_lsm_dir + ext):
-        #keep only surface and subsurface runoff, remove rest
-        command = ["ncks", "-v", variables, nc_file, nc_file, "-O"]
+    for nc_file in glob.glob(rrr_lsm_dir + "/*.nc4"):
+        #keep only Qs_acc and Qsb_acc, remove rest
+        command = ["ncks", "-v", "Qs_acc,Qsb_acc", nc_file, nc_file, "-O"]
         subprocess.run(command, check=True)
+
 
 #*******************************************************************************
 #End
