@@ -6,7 +6,7 @@
 #Purpose:
 #Given and model name, a temporal frequency key, a start date, an end date, and
 #a folder path, this script downloads LDAS data from GES-DISC using the 
-#earthaccess library
+#earthaccess opensource library
 #Author:
 #Cedric H. David, Manu Tom 2018-24
 
