@@ -37,6 +37,13 @@ jobs:
 
       steps:
 
+      # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+      # Checkout repository
+      # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+         - name: Checkout repository
+           uses: actions/checkout@v2
+
+      
       #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       #Display GitHub Action-related information
       #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -50,9 +57,9 @@ jobs:
               echo "The GitHub workspace is ${{ github.workspace }}"
               echo "The shell used is $SHELL"
 
-      #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      #List files in context for debugging
-      #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+      # List files in context for debugging
+      # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
          - name: List files in context
            run: ls -la
       
