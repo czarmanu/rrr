@@ -51,6 +51,12 @@ jobs:
               echo "The shell used is $SHELL"
 
       #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      #List files in context for debugging
+      #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+         - name: List files in context
+           run: ls -la
+      
+      #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       #Login to Docker Hub
       #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
          - name: Login to Docker Hub
