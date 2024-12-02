@@ -223,7 +223,7 @@ def earthaccess_dwnld(file_count):
         try:
             if len(dwnld_files_srch) > 0:
                 files_dwnld_list = earthaccess.download(dwnld_files_srch,
-                                                        rrr_lsm_dir)
+                                                        rrr_lsm_dir, threads=2)
                 print("LDAS files downloaded: ", files_dwnld_list)
 
                 # Count the number of properly downloaded files
